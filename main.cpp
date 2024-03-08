@@ -113,7 +113,7 @@ public:
     optional<vector<Document>> FindTopDocuments(const string& raw_query, DocumentPredicate document_predicate) const {
         const optional<Query> query = ParseQuery(raw_query);
         
-        if (!query.has_value()) {
+        if (!IsValidWord(raw_query) || !query.has_value()) {
             return nullopt;
         }
 
