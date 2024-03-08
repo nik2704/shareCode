@@ -88,23 +88,23 @@ public:
     }
 
     [[nodiscard]] bool AddDocument(int document_id, const string& document, DocumentStatus status, const vector<int>& ratings) {
-        if (document_id < 0 || documents_.count(document_id) > 0) {
+        if (document_id < 0 || documents_.count(document_id) > 0 || !IsValidWord(document)) {
             return false;
         }
 
         const vector<string> words = SplitIntoWordsNoStop(document);
 
         if (words.empty()) {
-            return false;
-        }
+            documents_.emplace(document_id, DocumentData{ComputeAverageRating(ratings), status});
+        } else {
+            const double inv_word_count = 1 / static_cast<double>(words.size());
+            
+            for (const string& word : words) {
+                word_to_document_freqs_[word][document_id] += inv_word_count;
+            }
 
-        const double inv_word_count = 1 / static_cast<double>(words.size());
-        
-        for (const string& word : words) {
-            word_to_document_freqs_[word][document_id] += inv_word_count;
+            documents_.emplace(document_id, DocumentData{ComputeAverageRating(ratings), status});
         }
-
-        documents_.emplace(document_id, DocumentData{ComputeAverageRating(ratings), status});
 
         return true;
     }
@@ -328,7 +328,7 @@ private:
         if (word == "-"s) {
             return false;
         }
-        
+
         return none_of(word.begin(), word.end(), [](char c) {
             return c >= '\0' && c < ' ';
         });
@@ -355,6 +355,9 @@ int main() {
     }
     if (!search_server.AddDocument(3, "большой пёс скво\x12рец"s, DocumentStatus::ACTUAL, {1, 3, 2})) {
         cout << "Документ не был добавлен, так как содержит спецсимволы"s << endl;
+    }
+    if (!search_server.AddDocument(3, ""s, DocumentStatus::ACTUAL, {1, 3, 2})) {
+        cout << "Документ не был добавлен, так как EMPTY"s << endl;
     }
     if (const auto documents = search_server.FindTopDocuments("--пушистый"s)) {
         for (const Document& document : *documents) {
