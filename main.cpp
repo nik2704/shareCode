@@ -78,11 +78,8 @@ public:
         }
     }
     
-    explicit SearchServer(const string& stop_words) {
-        for (const string& word : SplitIntoWords(stop_words)) {
-            stop_words_.insert(word);
-        }
-    }    
+    explicit SearchServer(const string& stop_words_text)
+        : SearchServer(SplitIntoWords(stop_words_text)) { }    
 
     void SetStopWords(const string& text) {
         for (const string& word : SplitIntoWords(text)) {
@@ -91,21 +88,13 @@ public:
     }
 
     [[nodiscard]] bool AddDocument(int document_id, const string& document, DocumentStatus status, const vector<int>& ratings) {
-        if (document_id < 0) {
-            return false;
-        }
-
-        if (documents_.count(document_id) > 0) {
+        if (document_id < 0 || documents_.count(document_id) > 0) {
             return false;
         }
 
         const vector<string> words = SplitIntoWordsNoStop(document);
 
-        int incorrect_words = count_if(words.begin(), words.end(), [](string word) {
-            return !IsValidWord(word) || word == "-"s;
-        });
-
-        if (words.empty() || words.size() == 0 || incorrect_words > 0) {
+        if (words.empty()) {
             return false;
         }
 
@@ -160,7 +149,7 @@ public:
 
     optional<tuple<vector<string>, DocumentStatus>> MatchDocument(const string& raw_query, int document_id) const {
         const optional<Query> query = ParseQuery(raw_query);
-        if (!query.has_value()) {
+        if (!IsValidWord(raw_query) || !query.has_value()) {
             return nullopt;
         }
 
@@ -251,7 +240,7 @@ private:
     };
 
     optional<QueryWord> ParseQueryWord(string text) const {
-        if (text == "-"s || !IsValidWord(text)) {
+        if (!IsValidWord(text)) {
             return nullopt;
         }
 
@@ -336,6 +325,10 @@ private:
     }
 
     static bool IsValidWord(const string& word) {
+        if (word == "-"s) {
+            return false;
+        }
+        
         return none_of(word.begin(), word.end(), [](char c) {
             return c >= '\0' && c < ' ';
         });
