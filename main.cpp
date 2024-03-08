@@ -140,7 +140,7 @@ public:
     }
 
     optional<vector<Document>> FindTopDocuments(const string& raw_query) const {
-        return FindTopDocuments(raw_query, [](int document_id, DocumentStatus doc_status, int rating) { return true; });
+        return FindTopDocuments(raw_query, DocumentStatus::ACTUAL);
     }
 
     int GetDocumentCount() const {
@@ -328,7 +328,7 @@ private:
         if (word == "-"s) {
             return false;
         }
-
+        
         return none_of(word.begin(), word.end(), [](char c) {
             return c >= '\0' && c < ' ';
         });
@@ -355,9 +355,6 @@ int main() {
     }
     if (!search_server.AddDocument(3, "большой пёс скво\x12рец"s, DocumentStatus::ACTUAL, {1, 3, 2})) {
         cout << "Документ не был добавлен, так как содержит спецсимволы"s << endl;
-    }
-    if (!search_server.AddDocument(3, ""s, DocumentStatus::ACTUAL, {1, 3, 2})) {
-        cout << "Документ не был добавлен, так как EMPTY"s << endl;
     }
     if (const auto documents = search_server.FindTopDocuments("--пушистый"s)) {
         for (const Document& document : *documents) {
